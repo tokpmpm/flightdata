@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>西雅圖航線載客率分析 (2024-2025)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', '微軟正黑體', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+            border-radius: 8px;
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .chart-container {
+            position: relative;
+            height: 50vh;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+        
+        /* Tab Styles */
+        .tab-buttons {
+            overflow: hidden;
+            border-bottom: 2px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .tab-link {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            font-size: 16px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab-link:hover {
+            background-color: #ddd;
+        }
+        .tab-link.active {
+            background-color: #0056b3;
+            color: white;
+            border-bottom: 2px solid #0056b3;
+        }
+        .tab-content {
+            display: none;
+            padding: 6px 12px;
+            border-top: none;
+            animation: fadeEffect 0.5s;
+        }
+        @keyframes fadeEffect {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+        th {
+            background-color: #0056b3;
+            color: white;
+            text-align: center;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>西雅圖航線載客率分析 (2024-2025)</h1>
+        <p>此報告分析了 113-114 年 (2024-2025) 西雅圖航線的載客數據，提供互動式圖表與各航空公司詳細資料。</p>
+
+        <h2>各航空公司載客率趨勢 (%)</h2>
+        <div class="chart-container">
+            <canvas id="loadFactorChart"></canvas>
+        </div>
+
+        <h2>各航空公司飛行架次趨勢</h2>
+        <div class="chart-container">
+            <canvas id="flightCountChart"></canvas>
+        </div>
+        
+        <h2>各航空公司詳細月度數據</h2>
+        <div class="tab-buttons" id="tab-buttons-container">
+            <!-- Tab buttons will be generated here -->
+        </div>
+
+        <div id="tab-content-container">
+            <!-- Tab content will be generated here -->
+        </div>
+
+    </div>
+
+    <script>
+        const rawData = `航點,年份,月份,航空公司,飛行架次,座位總數,載客人數,載客率
+西雅圖,113年,1,長榮,87,29279,25985,88.7
+西雅圖,113年,2,長榮,77,25954,22567,86.9
+西雅圖,113年,3,長榮,65,22173,21549,97.2
+西雅圖,113年,4,長榮,61,20862,20124,96.5
+西雅圖,113年,5,長榮,62,21204,20548,96.9
+西雅圖,113年,6,長榮,65,22135,21646,97.8
+西雅圖,113年,6,達美,48,13488,11990,88.9
+西雅圖,113年,7,中華,25,7650,6770,88.5
+西雅圖,113年,7,長榮,88,29602,27364,92.4
+西雅圖,113年,7,達美,58,16298,13661,83.8
+西雅圖,113年,8,中華,44,13464,11818,87.8
+西雅圖,113年,8,長榮,90,30248,28133,93
+西雅圖,113年,8,達美,62,17422,14316,82.2
+西雅圖,113年,8,星宇,13,3978,3488,87.7
+西雅圖,113年,9,中華,42,12852,10452,81.3
+西雅圖,113年,9,長榮,67,22781,20503,90
+西雅圖,113年,9,達美,60,16860,8625,51.2
+西雅圖,113年,9,星宇,26,7956,6411,80.6
+西雅圖,113年,10,中華,45,13770,9838,71.4
+西雅圖,113年,10,長榮,61,20862,18863,90.4
+西雅圖,113年,10,達美,57,16017,9477,59.2
+西雅圖,113年,10,星宇,26,7956,6056,76.1
+西雅圖,113年,11,中華,40,12240,8910,72.8
+西雅圖,113年,11,長榮,66,22477,20111,89.5
+西雅圖,113年,11,達美,62,17422,12170,69.9
+西雅圖,113年,11,星宇,26,7956,6614,83.1
+西雅圖,113年,12,中華,46,14076,9469,67.3
+西雅圖,113年,12,長榮,88,29602,23640,79.9
+西雅圖,113年,12,達美,62,17422,13047,74.9
+西雅圖,113年,12,星宇,27,8262,6753,81.7
+西雅圖,114年,1,中華,43,13158,11433,86.9
+西雅圖,114年,1,長榮,88,29602,26620,89.9
+西雅圖,114年,1,達美,62,17422,14481,83.1
+西雅圖,114年,1,星宇,27,8262,7644,92.5
+西雅圖,114年,2,中華,40,12240,9479,77.4
+西雅圖,114年,2,長榮,80,26904,22431,83.4
+西雅圖,114年,2,達美,56,15736,11972,76.1
+西雅圖,114年,2,星宇,24,7344,6630,90.3
+西雅圖,114年,3,中華,44,13464,10574,78.5
+西雅圖,114年,3,長榮,88,29583,25415,85.9
+西雅圖,114年,3,達美,62,17497,13680,78.2
+西雅圖,114年,3,星宇,61,18666,14467,77.5
+西雅圖,114年,4,中華,44,13464,11107,82.5
+西雅圖,114年,4,長榮,86,28937,25091,86.7
+西雅圖,114年,4,達美,58,17686,14333,81
+西雅圖,114年,4,星宇,60,18360,13904,75.7`;
+
+        // 1. Data Processing
+        const lines = rawData.trim().split('\n');
+        const headers = lines[0].split(',');
+        const data = lines.slice(1).map(line => {
+            const values = line.split(',');
+            return {
+                year: parseInt(values[1].replace('年', '')) + 1911,
+                month: parseInt(values[2]),
+                airline: values[3].trim(),
+                flights: parseInt(values[4]),
+                seats: parseInt(values[5]),
+                passengers: parseInt(values[6]),
+                loadFactor: parseFloat(values[7])
+            };
+        });
+
+        const sortedData = data.sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.month - b.month;
+        });
+        
+        const labels = [...new Set(sortedData.map(d => `${d.year}-${String(d.month).padStart(2, '0')}`))]
+                        .sort();
+        const airlines = [...new Set(data.map(d => d.airline))];
+        
+        const airlineColors = {
+            '中華': '#0056b3', '長榮': '#00833e', '星宇': '#5c5c5c', '達美': '#003366'
+        };
+
+        // 2. Chart Creation
+        function createChart(canvasId, dataKey, chartLabel) {
+            const datasets = airlines.map(airline => {
+                const airlineData = labels.map(label => {
+                    const [year, month] = label.split('-').map(Number);
+                    const record = sortedData.find(d => d.year === year && d.month === month && d.airline === airline);
+                    return record ? record[dataKey] : null; 
+                });
+
+                if (airlineData.every(d => d === null)) return null;
+
+                return {
+                    label: airline,
+                    data: airlineData,
+                    borderColor: airlineColors[airline] || `#${Math.floor(Math.random()*16777215).toString(16)}`,
+                    backgroundColor: (airlineColors[airline] || `#${Math.floor(Math.random()*16777215).toString(16)}`) + '33',
+                    tension: 0.1,
+                    spanGaps: true,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                };
+            }).filter(Boolean);
+
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + (dataKey === 'loadFactor' ? '%' : '');
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: dataKey !== 'loadFactor',
+                            title: { display: true, text: chartLabel }
+                        },
+                        x: {
+                            title: { display: true, text: '月份' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Tab and Table Generation
+        function generateTabsAndTables() {
+            const buttonsContainer = document.getElementById('tab-buttons-container');
+            const contentContainer = document.getElementById('tab-content-container');
+            let buttonHTML = '';
+            let contentHTML = '';
+
+            airlines.forEach((airline, index) => {
+                const isActive = index === 0 ? 'active' : '';
+                buttonHTML += `<button class="tab-link ${isActive}" onclick="openTab(event, '${airline}')">${airline}</button>`;
+
+                const airlineData = sortedData.filter(d => d.airline === airline);
+                let tableRows = '';
+                airlineData.forEach(row => {
+                    tableRows += `
+                        <tr>
+                            <td style="text-align: left;">${row.year}-${String(row.month).padStart(2, '0')}</td>
+                            <td>${row.flights.toLocaleString()}</td>
+                            <td>${row.seats.toLocaleString()}</td>
+                            <td>${row.passengers.toLocaleString()}</td>
+                            <td>${row.loadFactor.toFixed(1)}</td>
+                        </tr>
+                    `;
+                });
+                
+                const displayStyle = index === 0 ? 'block' : 'none';
+                contentHTML += `
+                    <div id="${airline}" class="tab-content" style="display: ${displayStyle};">
+                        <h3>${airline} - 每月數據</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left;">月份</th>
+                                    <th>飛行架次</th>
+                                    <th>座位總數</th>
+                                    <th>載客人數</th>
+                                    <th>載客率 (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            });
+            
+            buttonsContainer.innerHTML = buttonHTML;
+            contentContainer.innerHTML = contentHTML;
+        }
+
+        // 4. Tab click handler
+        function openTab(evt, airlineName) {
+            let i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tab-link");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(airlineName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        // 5. Render everything on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            createChart('loadFactorChart', 'loadFactor', '載客率 (%)');
+            createChart('flightCountChart', 'flights', '飛行架次');
+            generateTabsAndTables();
+        });
+    </script>
+</body>
+</html>
