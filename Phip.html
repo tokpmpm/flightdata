@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>航點別 - 航空公司載客數據儀表板 (最新數據)</title>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NXE5H8PEW9"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-NXE5H8PEW9');
+    </script>
+    
+    <!-- 引入 Plotly.js 圖表庫 -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background-color: #fff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #005a87;
+        }
+        .selector-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .selector-container label {
+            font-size: 1.2em;
+            margin-right: 10px;
+        }
+        #destinationSelector {
+            font-size: 1.1em;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .chart-container {
+            width: 100%;
+            margin-bottom: 40px;
+        }
+        .tabs-container {
+            margin-top: 40px;
+        }
+        .tab-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 2px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .tab-button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .tab-button:hover {
+            background-color: #f0f0f0;
+        }
+        .tab-button.active {
+            font-weight: bold;
+            color: #005a87;
+            border-bottom: 3px solid #005a87;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>航點別 - 航空公司載客數據儀表板</h1>
+
+    <div class="selector-container">
+        <label for="destinationSelector">請選擇航點：</label>
+        <select id="destinationSelector"></select>
+    </div>
+    
+    <h2 id="loadFactorChartTitle"></h2>
+    <div id="loadFactorChart" class="chart-container"></div>
+    
+    <h2 id="passengerBarChartTitle"></h2>
+    <div id="passengerBarChart" class="chart-container"></div>
+    
+    <div class="tabs-container">
+        <h2 id="detailsTableTitle"></h2>
+        <div id="airlineTabs" class="tab-buttons"></div>
+        <div id="tabContentContainer"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- 步驟一：巢狀結構的最新數據 (已處理完畢) ---
+    const destinationData = {
+        "馬尼拉": {
+            "中華航空": [{"year": 2024, "month": 1, "flights": 160, "seats": 43342, "passengers": 32153}, {"year": 2024, "month": 2, "flights": 148, "seats": 40744, "passengers": 30936}, {"year": 2024, "month": 3, "flights": 160, "seats": 42380, "passengers": 30531}, {"year": 2024, "month": 4, "flights": 168, "seats": 44936, "passengers": 25975}, {"year": 2024, "month": 5, "flights": 186, "seats": 48664, "passengers": 27681}, {"year": 2024, "month": 6, "flights": 180, "seats": 47132, "passengers": 32007}, {"year": 2024, "month": 7, "flights": 184, "seats": 48002, "passengers": 31115}, {"year": 2024, "month": 8, "flights": 185, "seats": 48516, "passengers": 26123}, {"year": 2024, "month": 9, "flights": 180, "seats": 47072, "passengers": 21222}, {"year": 2024, "month": 10, "flights": 183, "seats": 47672, "passengers": 24783}, {"year": 2024, "month": 11, "flights": 180, "seats": 46882, "passengers": 28318}, {"year": 2024, "month": 12, "flights": 188, "seats": 50452, "passengers": 41978}, {"year": 2025, "month": 1, "flights": 186, "seats": 48832, "passengers": 43273}, {"year": 2025, "month": 2, "flights": 168, "seats": 44096, "passengers": 34774}, {"year": 2025, "month": 3, "flights": 183, "seats": 48312, "passengers": 31693}, {"year": 2025, "month": 4, "flights": 181, "seats": 47304, "passengers": 36197}],
+            "星宇航空": [{"year": 2024, "month": 1, "flights": 28, "seats": 5264, "passengers": 4152}, {"year": 2024, "month": 2, "flights": 24, "seats": 4512, "passengers": 3117}, {"year": 2024, "month": 3, "flights": 26, "seats": 4888, "passengers": 2658}, {"year": 2024, "month": 4, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 5, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 6, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 7, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 8, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 11, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 12, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 1, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 3, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 4, "flights": 0, "seats": 0, "passengers": 0}],
+            "宿霧太平洋": [{"year": 2024, "month": 1, "flights": 124, "seats": 28420, "passengers": 23910}, {"year": 2024, "month": 2, "flights": 114, "seats": 26702, "passengers": 20813}, {"year": 2024, "month": 3, "flights": 114, "seats": 28130, "passengers": 21787}, {"year": 2024, "month": 4, "flights": 120, "seats": 27382, "passengers": 20222}, {"year": 2024, "month": 5, "flights": 124, "seats": 31994, "passengers": 20191}, {"year": 2024, "month": 6, "flights": 120, "seats": 32636, "passengers": 24338}, {"year": 2024, "month": 7, "flights": 116, "seats": 30402, "passengers": 25454}, {"year": 2024, "month": 8, "flights": 138, "seats": 33894, "passengers": 26168}, {"year": 2024, "month": 9, "flights": 130, "seats": 28620, "passengers": 21439}, {"year": 2024, "month": 10, "flights": 138, "seats": 31128, "passengers": 25086}, {"year": 2024, "month": 11, "flights": 144, "seats": 34662, "passengers": 31108}, {"year": 2024, "month": 12, "flights": 150, "seats": 35304, "passengers": 31943}, {"year": 2025, "month": 1, "flights": 152, "seats": 35812, "passengers": 33082}, {"year": 2025, "month": 2, "flights": 136, "seats": 41784, "passengers": 35550}, {"year": 2025, "month": 3, "flights": 150, "seats": 48298, "passengers": 40335}, {"year": 2025, "month": 4, "flights": 146, "seats": 49512, "passengers": 39457}],
+            "荷蘭皇家": [{"year": 2024, "month": 1, "flights": 36, "seats": 11072, "passengers": 6839}, {"year": 2024, "month": 2, "flights": 32, "seats": 9616, "passengers": 5196}, {"year": 2024, "month": 3, "flights": 36, "seats": 10968, "passengers": 5750}, {"year": 2024, "month": 4, "flights": 42, "seats": 12712, "passengers": 5713}, {"year": 2024, "month": 5, "flights": 46, "seats": 13732, "passengers": 6888}, {"year": 2024, "month": 6, "flights": 42, "seats": 12556, "passengers": 5845}, {"year": 2024, "month": 7, "flights": 38, "seats": 11484, "passengers": 5439}, {"year": 2024, "month": 8, "flights": 44, "seats": 13248, "passengers": 6237}, {"year": 2024, "month": 9, "flights": 38, "seats": 11428, "passengers": 4290}, {"year": 2024, "month": 10, "flights": 38, "seats": 11556, "passengers": 4634}, {"year": 2024, "month": 11, "flights": 36, "seats": 10688, "passengers": 5267}, {"year": 2024, "month": 12, "flights": 30, "seats": 9048, "passengers": 4829}, {"year": 2025, "month": 1, "flights": 36, "seats": 10844, "passengers": 5982}, {"year": 2025, "month": 2, "flights": 30, "seats": 9028, "passengers": 4473}, {"year": 2025, "month": 3, "flights": 34, "seats": 10204, "passengers": 4879}, {"year": 2025, "month": 4, "flights": 34, "seats": 10048, "passengers": 3886}],
+            "菲律賓": [{"year": 2024, "month": 1, "flights": 114, "seats": 23024, "passengers": 16064}, {"year": 2024, "month": 2, "flights": 108, "seats": 24174, "passengers": 15523}, {"year": 2024, "month": 3, "flights": 108, "seats": 23530, "passengers": 15061}, {"year": 2024, "month": 4, "flights": 116, "seats": 24382, "passengers": 14246}, {"year": 2024, "month": 5, "flights": 104, "seats": 22262, "passengers": 13214}, {"year": 2024, "month": 6, "flights": 118, "seats": 24714, "passengers": 18159}, {"year": 2024, "month": 7, "flights": 116, "seats": 23560, "passengers": 18651}, {"year": 2024, "month": 8, "flights": 100, "seats": 20142, "passengers": 14806}, {"year": 2024, "month": 9, "flights": 106, "seats": 22524, "passengers": 12854}, {"year": 2024, "month": 10, "flights": 100, "seats": 20716, "passengers": 13786}, {"year": 2024, "month": 11, "flights": 118, "seats": 24014, "passengers": 19024}, {"year": 2024, "month": 12, "flights": 124, "seats": 27260, "passengers": 21267}, {"year": 2025, "month": 1, "flights": 124, "seats": 31076, "passengers": 24096}, {"year": 2025, "month": 2, "flights": 102, "seats": 26012, "passengers": 20085}, {"year": 2025, "month": 3, "flights": 124, "seats": 28004, "passengers": 20852}, {"year": 2025, "month": 4, "flights": 120, "seats": 26672, "passengers": 19866}],
+            "菲律賓皇家": [{"year": 2024, "month": 1, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 3, "flights": 63, "seats": 10590, "passengers": 7115}, {"year": 2024, "month": 4, "flights": 60, "seats": 9930, "passengers": 6394}, {"year": 2024, "month": 5, "flights": 18, "seats": 3090, "passengers": 1435}, {"year": 2024, "month": 6, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 7, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 8, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 11, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 12, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 1, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 3, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 4, "flights": 0, "seats": 0, "passengers": 0}],
+            "菲亞洲": [{"year": 2024, "month": 1, "flights": 150, "seats": 27072, "passengers": 23823}, {"year": 2024, "month": 2, "flights": 142, "seats": 25620, "passengers": 22658}, {"year": 2024, "month": 3, "flights": 150, "seats": 27048, "passengers": 23209}, {"year": 2024, "month": 4, "flights": 146, "seats": 26340, "passengers": 21652}, {"year": 2024, "month": 5, "flights": 150, "seats": 27084, "passengers": 22718}, {"year": 2024, "month": 6, "flights": 146, "seats": 26364, "passengers": 23190}, {"year": 2024, "month": 7, "flights": 150, "seats": 27048, "passengers": 22915}, {"year": 2024, "month": 8, "flights": 152, "seats": 27456, "passengers": 22380}, {"year": 2024, "month": 9, "flights": 144, "seats": 26040, "passengers": 20235}, {"year": 2024, "month": 10, "flights": 140, "seats": 25284, "passengers": 20383}, {"year": 2024, "month": 11, "flights": 144, "seats": 25992, "passengers": 22465}, {"year": 2024, "month": 12, "flights": 150, "seats": 27036, "passengers": 22689}, {"year": 2025, "month": 1, "flights": 150, "seats": 27000, "passengers": 22576}, {"year": 2025, "month": 2, "flights": 136, "seats": 24540, "passengers": 20219}, {"year": 2025, "month": 3, "flights": 150, "seats": 27084, "passengers": 20580}, {"year": 2025, "month": 4, "flights": 146, "seats": 26316, "passengers": 20091}],
+            "長榮航空": [{"year": 2024, "month": 1, "flights": 186, "seats": 57255, "passengers": 50472}, {"year": 2024, "month": 2, "flights": 174, "seats": 53746, "passengers": 45661}, {"year": 2024, "month": 3, "flights": 186, "seats": 57606, "passengers": 45249}, {"year": 2024, "month": 4, "flights": 180, "seats": 57900, "passengers": 43774}, {"year": 2024, "month": 5, "flights": 186, "seats": 59830, "passengers": 46383}, {"year": 2024, "month": 6, "flights": 180, "seats": 58020, "passengers": 50094}, {"year": 2024, "month": 7, "flights": 182, "seats": 58598, "passengers": 48107}, {"year": 2024, "month": 8, "flights": 186, "seats": 59870, "passengers": 41848}, {"year": 2024, "month": 9, "flights": 180, "seats": 57960, "passengers": 35746}, {"year": 2024, "month": 10, "flights": 184, "seats": 58652, "passengers": 38392}, {"year": 2024, "month": 11, "flights": 182, "seats": 56338, "passengers": 40264}, {"year": 2024, "month": 12, "flights": 186, "seats": 57255, "passengers": 51341}, {"year": 2025, "month": 1, "flights": 186, "seats": 57535, "passengers": 54077}, {"year": 2025, "month": 2, "flights": 168, "seats": 51936, "passengers": 43419}, {"year": 2025, "month": 3, "flights": 186, "seats": 57654, "passengers": 43090}, {"year": 2025, "month": 4, "flights": 180, "seats": 58004, "passengers": 46842}]
+        },
+        "公主港": {
+            "菲律賓皇家": [{"year": 2024, "month": 1, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 3, "flights": 14, "seats": 2280, "passengers": 1050}, {"year": 2024, "month": 4, "flights": 16, "seats": 2580, "passengers": 1251}, {"year": 2024, "month": 5, "flights": 14, "seats": 2400, "passengers": 1331}, {"year": 2024, "month": 6, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 7, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 8, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 11, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 12, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 1, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 3, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 4, "flights": 0, "seats": 0, "passengers": 0}]
+        },
+        "克拉克": {
+            "星宇航空": [{"year": 2024, "month": 1, "flights": 34, "seats": 6392, "passengers": 2540}, {"year": 2024, "month": 2, "flights": 34, "seats": 6392, "passengers": 3138}, {"year": 2024, "month": 3, "flights": 36, "seats": 6768, "passengers": 2717}, {"year": 2024, "month": 4, "flights": 26, "seats": 4888, "passengers": 2350}, {"year": 2024, "month": 5, "flights": 46, "seats": 8648, "passengers": 2999}, {"year": 2024, "month": 6, "flights": 42, "seats": 7896, "passengers": 4180}, {"year": 2024, "month": 7, "flights": 52, "seats": 9776, "passengers": 4445}, {"year": 2024, "month": 8, "flights": 58, "seats": 10904, "passengers": 5094}, {"year": 2024, "month": 9, "flights": 60, "seats": 11280, "passengers": 3817}, {"year": 2024, "month": 10, "flights": 58, "seats": 10904, "passengers": 4437}, {"year": 2024, "month": 11, "flights": 32, "seats": 6016, "passengers": 2985}, {"year": 2024, "month": 12, "flights": 52, "seats": 9776, "passengers": 7119}, {"year": 2025, "month": 1, "flights": 60, "seats": 11280, "passengers": 9464}, {"year": 2025, "month": 2, "flights": 56, "seats": 10528, "passengers": 8053}, {"year": 2025, "month": 3, "flights": 64, "seats": 12032, "passengers": 6582}, {"year": 2025, "month": 4, "flights": 70, "seats": 13160, "passengers": 9715}],
+            "宿霧太平洋": [{"year": 2024, "month": 1, "flights": 9, "seats": 1620, "passengers": 1130}, {"year": 2024, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 3, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 4, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 5, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 6, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 7, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 8, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 11, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 12, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 1, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 3, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 4, "flights": 0, "seats": 0, "passengers": 0}],
+            "長榮航空": [{"year": 2024, "month": 1, "flights": 62, "seats": 19158, "passengers": 16133}, {"year": 2024, "month": 2, "flights": 58, "seats": 17922, "passengers": 15189}, {"year": 2024, "month": 3, "flights": 62, "seats": 19158, "passengers": 14437}, {"year": 2024, "month": 4, "flights": 60, "seats": 18540, "passengers": 14463}, {"year": 2024, "month": 5, "flights": 62, "seats": 19158, "passengers": 13072}, {"year": 2024, "month": 6, "flights": 60, "seats": 18540, "passengers": 13781}, {"year": 2024, "month": 7, "flights": 62, "seats": 19158, "passengers": 12931}, {"year": 2024, "month": 8, "flights": 62, "seats": 19158, "passengers": 11051}, {"year": 2024, "month": 9, "flights": 60, "seats": 18540, "passengers": 10354}, {"year": 2024, "month": 10, "flights": 62, "seats": 19158, "passengers": 12483}, {"year": 2024, "month": 11, "flights": 60, "seats": 18540, "passengers": 13533}, {"year": 2024, "month": 12, "flights": 62, "seats": 19158, "passengers": 16353}, {"year": 2025, "month": 1, "flights": 62, "seats": 19148, "passengers": 17714}, {"year": 2025, "month": 2, "flights": 56, "seats": 17304, "passengers": 15437}, {"year": 2025, "month": 3, "flights": 62, "seats": 19158, "passengers": 15018}, {"year": 2025, "month": 4, "flights": 60, "seats": 18458, "passengers": 15795}]
+        },
+        "宿霧": {
+            "中華航空": [{"year": 2024, "month": 1, "flights": 44, "seats": 7920, "passengers": 6503}, {"year": 2024, "month": 2, "flights": 42, "seats": 7560, "passengers": 6580}, {"year": 2024, "month": 3, "flights": 44, "seats": 7920, "passengers": 5486}, {"year": 2024, "month": 4, "flights": 44, "seats": 7920, "passengers": 5715}, {"year": 2024, "month": 5, "flights": 42, "seats": 7560, "passengers": 5810}, {"year": 2024, "month": 6, "flights": 44, "seats": 7920, "passengers": 6611}, {"year": 2024, "month": 7, "flights": 44, "seats": 7876, "passengers": 6938}, {"year": 2024, "month": 8, "flights": 44, "seats": 7750, "passengers": 6218}, {"year": 2024, "month": 9, "flights": 44, "seats": 7718, "passengers": 4632}, {"year": 2024, "month": 10, "flights": 44, "seats": 7838, "passengers": 3975}, {"year": 2024, "month": 11, "flights": 42, "seats": 7560, "passengers": 3746}, {"year": 2024, "month": 12, "flights": 46, "seats": 8236, "passengers": 6013}, {"year": 2025, "month": 1, "flights": 42, "seats": 7560, "passengers": 6811}, {"year": 2025, "month": 2, "flights": 40, "seats": 7200, "passengers": 5717}, {"year": 2025, "month": 3, "flights": 46, "seats": 8242, "passengers": 5410}, {"year": 2025, "month": 4, "flights": 42, "seats": 7332, "passengers": 5669}],
+            "星宇航空": [{"year": 2024, "month": 1, "flights": 62, "seats": 11656, "passengers": 8395}, {"year": 2024, "month": 2, "flights": 58, "seats": 10904, "passengers": 9087}, {"year": 2024, "month": 3, "flights": 62, "seats": 11656, "passengers": 7543}, {"year": 2024, "month": 4, "flights": 60, "seats": 11280, "passengers": 8313}, {"year": 2024, "month": 5, "flights": 62, "seats": 11656, "passengers": 8086}, {"year": 2024, "month": 6, "flights": 59, "seats": 11092, "passengers": 9066}, {"year": 2024, "month": 7, "flights": 62, "seats": 11656, "passengers": 10309}, {"year": 2024, "month": 8, "flights": 62, "seats": 11656, "passengers": 9961}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 60, "seats": 11280, "passengers": 6258}, {"year": 2024, "month": 11, "flights": 60, "seats": 11280, "passengers": 6758}, {"year": 2024, "month": 12, "flights": 62, "seats": 11656, "passengers": 8779}, {"year": 2025, "month": 1, "flights": 62, "seats": 11656, "passengers": 9878}, {"year": 2025, "month": 2, "flights": 56, "seats": 10528, "passengers": 7815}, {"year": 2025, "month": 3, "flights": 62, "seats": 11656, "passengers": 7412}, {"year": 2025, "month": 4, "flights": 60, "seats": 11280, "passengers": 8222}],
+            "宿霧太平洋": [{"year": 2024, "month": 1, "flights": 8, "seats": 1440, "passengers": 1168}, {"year": 2024, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 3, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 4, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 5, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 6, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 7, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 8, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 11, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 12, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 1, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 3, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 4, "flights": 0, "seats": 0, "passengers": 0}],
+            "菲亞洲": [{"year": 2024, "month": 1, "flights": 36, "seats": 6588, "passengers": 4113}, {"year": 2024, "month": 2, "flights": 34, "seats": 6156, "passengers": 4520}, {"year": 2024, "month": 3, "flights": 34, "seats": 6192, "passengers": 3251}, {"year": 2024, "month": 4, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 5, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 6, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 7, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 8, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 11, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 12, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 1, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 2, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 3, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2025, "month": 4, "flights": 0, "seats": 0, "passengers": 0}],
+            "長榮航空": [{"year": 2024, "month": 1, "flights": 62, "seats": 15918, "passengers": 13706}, {"year": 2024, "month": 2, "flights": 58, "seats": 14720, "passengers": 13222}, {"year": 2024, "month": 3, "flights": 62, "seats": 16288, "passengers": 12757}, {"year": 2024, "month": 4, "flights": 60, "seats": 15462, "passengers": 12899}, {"year": 2024, "month": 5, "flights": 62, "seats": 15852, "passengers": 13820}, {"year": 2024, "month": 6, "flights": 60, "seats": 18540, "passengers": 16164}, {"year": 2024, "month": 7, "flights": 62, "seats": 19158, "passengers": 17253}, {"year": 2024, "month": 8, "flights": 62, "seats": 19158, "passengers": 16728}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 62, "seats": 19196, "passengers": 12346}, {"year": 2024, "month": 11, "flights": 60, "seats": 18530, "passengers": 11328}, {"year": 2024, "month": 12, "flights": 62, "seats": 19158, "passengers": 15048}, {"year": 2025, "month": 1, "flights": 62, "seats": 19224, "passengers": 17402}, {"year": 2025, "month": 2, "flights": 56, "seats": 17392, "passengers": 14062}, {"year": 2025, "month": 3, "flights": 62, "seats": 19158, "passengers": 13160}, {"year": 2025, "month": 4, "flights": 60, "seats": 18540, "passengers": 15499}]
+        },
+        "長灘島(卡提克蘭)": {
+            "菲律賓皇家": [{"year": 2024, "month": 1, "flights": 4, "seats": 720, "passengers": 532}, {"year": 2024, "month": 2, "flights": 16, "seats": 2880, "passengers": 2246}, {"year": 2024, "month": 3, "flights": 47, "seats": 8010, "passengers": 3487}, {"year": 2024, "month": 4, "flights": 44, "seats": 7350, "passengers": 5335}, {"year": 2024, "month": 5, "flights": 32, "seats": 5730, "passengers": 4092}, {"year": 2024, "month": 6, "flights": 32, "seats": 5760, "passengers": 4865}, {"year": 2024, "month": 7, "flights": 26, "seats": 4680, "passengers": 4295}, {"year": 2024, "month": 8, "flights": 28, "seats": 5040, "passengers": 4267}, {"year": 2024, "month": 9, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 10, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 11, "flights": 0, "seats": 0, "passengers": 0}, {"year": 2024, "month": 12, "flights": 14, "seats": 2520, "passengers": 1885}, {"year": 2025, "month": 1, "flights": 28, "seats": 5040, "passengers": 3735}, {"year": 2025, "month": 2, "flights": 20, "seats": 3600, "passengers": 2403}, {"year": 2025, "month": 3, "flights": 26, "seats": 4680, "passengers": 2864}, {"year": 2025, "month": 4, "flights": 0, "seats": 0, "passengers": 0}]
+        },
+        
+    };
+
+    // --- 全局變數 ---
+    const selector = document.getElementById('destinationSelector');
+    const allDestinations = Object.keys(destinationData);
+    let months = [];
+
+    const airlineColors = {
+        "長榮航空": '#00A64F',  // 長榮標準綠
+        "中華航空": '#D56878',  // 華航標準紅梅色
+        "星宇航空": '#C69B80',  // 星宇大地金
+        "宿霧太平洋": '#0070B8',  // 鮮豔的藍色
+        "荷蘭皇家": '#FF7F0E',  // 鮮豔的橘色
+        "菲律賓": '#D62728',  // 鮮豔的紅色
+        "菲律賓皇家": '#6A0DAD',  // 鮮豔的紫色
+        "菲亞洲": '#A52A2A'   // 棕色
+    };
+
+    for (const dest in destinationData) {
+        for (const airline in destinationData[dest]) {
+            destinationData[dest][airline].forEach(d => {
+                d.loadFactor = d.seats > 0 ? d.passengers / d.seats : 0;
+            });
+        }
+    }
+    
+    function updateDashboard(destination) {
+        const currentData = destinationData[destination];
+        const airlinesOnRoute = Object.keys(currentData);
+
+        months = [];
+        if (airlinesOnRoute.length > 0) {
+            currentData[airlinesOnRoute[0]].forEach(d => {
+                months.push(`${d.year}-${String(d.month).padStart(2, '0')}`);
+            });
+        }
+        
+        document.getElementById('loadFactorChartTitle').textContent = `${destination} - 各航空公司載客率趨勢`;
+        document.getElementById('passengerBarChartTitle').textContent = `${destination} - 每月總載客人數`;
+        document.getElementById('detailsTableTitle').textContent = `${destination} - 航空公司詳細月度數據`;
+
+        createLoadFactorChart(currentData, airlinesOnRoute);
+        createPassengerBarChart(currentData, airlinesOnRoute);
+        createAirlineTabs(currentData, airlinesOnRoute);
+    }
+    
+    function createLoadFactorChart(data, airlines) {
+        const traces = [];
+        airlines.forEach(airline => {
+            traces.push({
+                x: months,
+                y: data[airline].map(d => d.passengers > 0 ? d.loadFactor : null),
+                mode: 'lines+markers',
+                name: airline,
+                hovertemplate: `<b>${airline}</b><br>載客率: %{y:.2%}<extra></extra>`,
+                connectgaps: false,
+                marker: { color: airlineColors[airline] || '#333' },
+                line: { 
+                    color: airlineColors[airline] || '#333',
+                    width: 2 
+                }
+            });
+        });
+
+        const avgLoadFactors = months.map((_, i) => {
+            let totalPassengers = 0, totalSeats = 0;
+            airlines.forEach(airline => {
+                const monthData = data[airline][i];
+                if(monthData && monthData.passengers > 0) {
+                    totalPassengers += monthData.passengers;
+                    totalSeats += monthData.seats;
+                }
+            });
+            return totalSeats > 0 ? totalPassengers / totalSeats : null;
+        });
+
+        traces.push({
+            x: months,
+            y: avgLoadFactors,
+            mode: 'lines+markers',
+            name: '平均載客率',
+            hovertemplate: '<b>平均載客率</b><br>%{y:.2%}<extra></extra>',
+            connectgaps: false,
+            line: { dash: 'dashdot', color: 'grey', width: 4 }
+        });
+
+        Plotly.newPlot('loadFactorChart', traces, {
+            yaxis: { title: '載客率', tickformat: '.0%' },
+            xaxis: { title: '月份' },
+            hovermode: 'x unified',
+            legend: { orientation: 'h', y: 1.02, yanchor: 'bottom', x: 1, xanchor: 'right' }
+        }, { responsive: true });
+    }
+
+    function createPassengerBarChart(data, airlines) {
+        const traces = airlines.map(airline => ({
+            x: months,
+            y: data[airline].map(d => d.passengers > 0 ? d.passengers : null),
+            name: airline,
+            type: 'bar',
+            hovertemplate: `<b>${airline}</b><br>載客人數: %{y:,}<extra></extra>`,
+            marker: { color: airlineColors[airline] || '#333' }
+        }));
+
+        Plotly.newPlot('passengerBarChart', traces, {
+            barmode: 'stack',
+            yaxis: { title: '總載客人數' },
+            xaxis: { title: '月份' },
+            hovermode: 'x unified',
+            legend: { orientation: 'h', y: 1.02, yanchor: 'bottom', x: 1, xanchor: 'right' }
+        }, { responsive: true });
+    }
+    
+    function createAirlineTabs(data, airlines) {
+        const tabButtonsContainer = document.getElementById('airlineTabs');
+        const tabContentContainer = document.getElementById('tabContentContainer');
+        tabButtonsContainer.innerHTML = '';
+        tabContentContainer.innerHTML = '';
+
+        airlines.forEach((airline, index) => {
+            const button = document.createElement('button');
+            button.className = 'tab-button';
+            button.textContent = airline;
+            button.dataset.target = `tab-${index}`;
+            
+            const content = document.createElement('div');
+            content.id = `tab-${index}`;
+            content.className = 'tab-content';
+            
+            let tableHTML = '<table><tr><th>月份</th><th>飛行架次</th><th>座位總數</th><th>載客人數</th><th>載客率</th></tr>';
+            data[airline].forEach(d => {
+                const monthLabel = `${d.year}年${d.month}月`;
+                tableHTML += `
+                    <tr>
+                        <td>${monthLabel}</td>
+                        <td>${d.flights.toLocaleString()}</td>
+                        <td>${d.seats.toLocaleString()}</td>
+                        <td>${d.passengers.toLocaleString()}</td>
+                        <td>${(d.loadFactor * 100).toFixed(2)}%</td>
+                    </tr>
+                `;
+            });
+            tableHTML += '</table>';
+            content.innerHTML = tableHTML;
+            
+            tabButtonsContainer.appendChild(button);
+            tabContentContainer.appendChild(content);
+
+            if (index === 0) {
+                button.classList.add('active');
+                content.classList.add('active');
+            }
+        });
+
+        tabButtonsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab-button')) {
+                tabButtonsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                tabContentContainer.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                const targetId = e.target.dataset.target;
+                e.target.classList.add('active');
+                document.getElementById(targetId).classList.add('active');
+            }
+        });
+    }
+    
+    function init() {
+        allDestinations.forEach(dest => {
+            const option = document.createElement('option');
+            option.value = dest;
+            option.textContent = dest;
+            selector.appendChild(option);
+        });
+
+        selector.addEventListener('change', (e) => {
+            updateDashboard(e.target.value);
+        });
+
+        if (allDestinations.length > 0) {
+            updateDashboard(allDestinations[0]);
+        }
+    }
+
+    init();
+});
+</script>
+
+</body>
+</html>
