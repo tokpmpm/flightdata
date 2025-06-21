@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>航點別 - 航空公司載客數據儀表板 (最新數據)</title>
+    <title>菲律賓 - 航空公司載客數據儀表板 (最新數據)</title>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-NXE5H8PEW9"></script>
@@ -18,15 +18,21 @@
     <!-- 引入 Plotly.js 圖表庫 -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
+        /* --- 通用樣式 --- */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif;
             background-color: #f4f7f6;
             color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 15px 0; /* 調整 body padding */
         }
         .container {
             max-width: 1200px;
+            width: 100%; /* 確保容器在小螢幕上是滿寬的 */
             margin: auto;
             background-color: #fff;
             padding: 20px 30px;
@@ -36,6 +42,12 @@
         h1, h2 {
             text-align: center;
             color: #005a87;
+        }
+        h1 {
+            font-size: 2em;
+        }
+        h2 {
+            font-size: 1.5em;
         }
         .selector-container {
             text-align: center;
@@ -53,14 +65,14 @@
         }
         .chart-container {
             width: 100%;
-            margin-bottom: 40px;
+            margin-bottom: 60px; /* 增加底部間距給圖例 */
         }
         .tabs-container {
             margin-top: 40px;
         }
         .tab-buttons {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: wrap; /* 允許按鈕換行，這對RWD很重要 */
             border-bottom: 2px solid #ccc;
             margin-bottom: 20px;
         }
@@ -73,7 +85,7 @@
             transition: all 0.3s ease;
             border-bottom: 3px solid transparent;
             margin-right: 5px;
-            margin-bottom: 5px;
+            margin-bottom: 5px; /* 換行時的垂直間距 */
         }
         .tab-button:hover {
             background-color: #f0f0f0;
@@ -89,6 +101,8 @@
         .tab-content.active {
             display: block;
         }
+        
+        /* --- 表格樣式 --- */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -98,6 +112,7 @@
             border: 1px solid #ddd;
             padding: 12px;
             text-align: left;
+            white-space: nowrap; /* 避免表格內容換行，搭配 overflow 使用 */
         }
         th {
             background-color: #e9ecef;
@@ -105,6 +120,51 @@
         }
         tr:nth-child(even) {
             background-color: #f8f9fa;
+        }
+
+        /* --- 手機版表格滾動容器 --- */
+        .table-wrapper {
+            overflow-x: auto; /* 核心：允許水平滾動 */
+            -webkit-overflow-scrolling: touch; /* 在 iOS 上提供流暢的滾動體驗 */
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        /* --- RWD (響應式網頁設計) --- */
+        @media (max-width: 768px) {
+            body {
+                padding: 0; /* 移除 body 的 padding，由 container 控制 */
+            }
+            .container {
+                padding: 15px;
+                border-radius: 0; /* 在手機上全螢幕顯示，移除圓角 */
+            }
+            h1 {
+                font-size: 1.6em;
+            }
+            h2 {
+                font-size: 1.3em;
+            }
+            .selector-container {
+                display: flex;
+                flex-direction: column; /* 垂直排列 */
+                align-items: center;
+            }
+            .selector-container label {
+                margin-right: 0;
+                margin-bottom: 10px; /* 增加與下拉選單的間距 */
+            }
+            #destinationSelector {
+                width: 90%; /* 讓下拉選單寬一點 */
+            }
+            .tab-button {
+                font-size: 14px;
+                padding: 8px 10px;
+            }
+            th, td {
+                padding: 8px; /* 減小表格內距 */
+                font-size: 14px; /* 縮小字體 */
+            }
         }
     </style>
 </head>
@@ -172,16 +232,17 @@ document.addEventListener('DOMContentLoaded', function() {
     let months = [];
 
     const airlineColors = {
-        "長榮航空": '#00A64F',  // 長榮標準綠
-        "中華航空": '#D56878',  // 華航標準紅梅色
-        "星宇航空": '#C69B80',  // 星宇大地金
-        "宿霧太平洋": '#0070B8',  // 鮮豔的藍色
-        "荷蘭皇家": '#FF7F0E',  // 鮮豔的橘色
-        "菲律賓": '#D62728',  // 鮮豔的紅色
-        "菲律賓皇家": '#6A0DAD',  // 鮮豔的紫色
-        "菲亞洲": '#A52A2A'   // 棕色
+        "長榮航空": '#00A64F',
+        "中華航空": '#D56878',
+        "星宇航空": '#C69B80',
+        "宿霧太平洋": '#0070B8',
+        "荷蘭皇家": '#FF7F0E',
+        "菲律賓": '#D62728',
+        "菲律賓皇家": '#6A0DAD',
+        "菲亞洲": '#A52A2A'
     };
-
+    
+    // 預先計算載客率
     for (const dest in destinationData) {
         for (const airline in destinationData[dest]) {
             destinationData[dest][airline].forEach(d => {
@@ -221,10 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 hovertemplate: `<b>${airline}</b><br>載客率: %{y:.2%}<extra></extra>`,
                 connectgaps: false,
                 marker: { color: airlineColors[airline] || '#333' },
-                line: { 
-                    color: airlineColors[airline] || '#333',
-                    width: 2 
-                }
+                line: { color: airlineColors[airline] || '#333', width: 2 }
             });
         });
 
@@ -250,12 +308,22 @@ document.addEventListener('DOMContentLoaded', function() {
             line: { dash: 'dashdot', color: 'grey', width: 4 }
         });
 
-        Plotly.newPlot('loadFactorChart', traces, {
+        const layout = {
             yaxis: { title: '載客率', tickformat: '.0%' },
             xaxis: { title: '月份' },
             hovermode: 'x unified',
-            legend: { orientation: 'h', y: 1.02, yanchor: 'bottom', x: 1, xanchor: 'right' }
-        }, { responsive: true });
+            // **修改**：將圖例移到圖表下方，水平置中，以適應小螢幕
+            legend: { 
+                orientation: 'h', 
+                y: -0.3, /* 負值將其移至圖表下方 */
+                yanchor: 'top',
+                x: 0.5,
+                xanchor: 'center'
+            },
+            margin: { t: 40, b: 100, l: 60, r: 20 } // 調整邊距以容納圖例和標籤
+        };
+
+        Plotly.newPlot('loadFactorChart', traces, layout, { responsive: true });
     }
 
     function createPassengerBarChart(data, airlines) {
@@ -267,14 +335,24 @@ document.addEventListener('DOMContentLoaded', function() {
             hovertemplate: `<b>${airline}</b><br>載客人數: %{y:,}<extra></extra>`,
             marker: { color: airlineColors[airline] || '#333' }
         }));
-
-        Plotly.newPlot('passengerBarChart', traces, {
+        
+        const layout = {
             barmode: 'stack',
             yaxis: { title: '總載客人數' },
             xaxis: { title: '月份' },
             hovermode: 'x unified',
-            legend: { orientation: 'h', y: 1.02, yanchor: 'bottom', x: 1, xanchor: 'right' }
-        }, { responsive: true });
+            // **修改**：將圖例移到圖表下方，水平置中
+            legend: { 
+                orientation: 'h', 
+                y: -0.3, 
+                yanchor: 'top',
+                x: 0.5,
+                xanchor: 'center'
+            },
+            margin: { t: 40, b: 100, l: 60, r: 20 } // 調整邊距
+        };
+
+        Plotly.newPlot('passengerBarChart', traces, layout, { responsive: true });
     }
     
     function createAirlineTabs(data, airlines) {
@@ -293,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
             content.id = `tab-${index}`;
             content.className = 'tab-content';
             
-            let tableHTML = '<table><tr><th>月份</th><th>飛行架次</th><th>座位總數</th><th>載客人數</th><th>載客率</th></tr>';
+            let tableHTML = '<table><thead><tr><th>月份</th><th>飛行架次</th><th>座位總數</th><th>載客人數</th><th>載客率</th></tr></thead><tbody>';
             data[airline].forEach(d => {
                 const monthLabel = `${d.year}年${d.month}月`;
                 tableHTML += `
@@ -306,8 +384,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tr>
                 `;
             });
-            tableHTML += '</table>';
-            content.innerHTML = tableHTML;
+            tableHTML += '</tbody></table>';
+            
+            // **修改**：將表格包裝在 .table-wrapper 中以實現水平滾動
+            content.innerHTML = `<div class="table-wrapper">${tableHTML}</div>`;
             
             tabButtonsContainer.appendChild(button);
             tabContentContainer.appendChild(content);
@@ -318,11 +398,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // 將事件監聽器綁定到父容器上，以提高效率
         tabButtonsContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('tab-button')) {
+                // 移除所有按鈕和內容的 active class
                 tabButtonsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
                 tabContentContainer.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                 
+                // 為點擊的目標添加 active class
                 const targetId = e.target.dataset.target;
                 e.target.classList.add('active');
                 document.getElementById(targetId).classList.add('active');
@@ -342,6 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateDashboard(e.target.value);
         });
 
+        // 頁面加載時，使用第一個航點初始化儀表板
         if (allDestinations.length > 0) {
             updateDashboard(allDestinations[0]);
         }
